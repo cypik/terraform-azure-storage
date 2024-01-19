@@ -7,8 +7,9 @@ provider "azurerm" {
 ## Resource group in which all resources will be deployed.
 ##-----------------------------------------------------------------------------
 module "resource_group" {
-  source      = "git::https://github.com/cypik/terraform-azure-resource-group.git?ref=v1.0.0"
-  name        = "app111"
+  source      = "cypik/resource-group/azure"
+  version     = "1.0.1"
+  name        = "app"
   environment = "test"
   location    = "North Europe"
 }
@@ -24,7 +25,7 @@ module "storage" {
   default_enabled               = true
   resource_group_name           = module.resource_group.resource_group_name
   location                      = "North Europe"
-  storage_account_name          = "tes3dfjg"
+  storage_account_name          = "t957hfyd4eg"
   public_network_access_enabled = true
   ##   Storage Container
   containers_list = [
