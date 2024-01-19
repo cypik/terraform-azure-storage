@@ -4,7 +4,8 @@ data "azurerm_client_config" "current" {}
 ## Labels module callled that will be used for naming and tags.
 ##-----------------------------------------------------------------------------
 module "labels" {
-  source      = "git::https://github.com/cypik/terraform-azure-labels.git?ref=v1.0.0"
+  source      = "cypik/labels/azure"
+  version     = "1.0.1"
   name        = var.name
   environment = var.environment
   managedby   = var.managedby
@@ -107,7 +108,7 @@ resource "azurerm_role_assignment" "identity_assigned" {
 #tfsec:ignore:azure-keyvault-ensure-key-expiry
 resource "azurerm_key_vault_key" "kvkey" {
   count        = var.enabled && var.default_enabled == false ? 1 : 0
-  name         = format("cmk-%s", module.labels.id)
+  name         = format("cmko-%s", module.labels.id)
   key_vault_id = var.key_vault_id
   key_type     = "RSA"
   key_size     = 2048

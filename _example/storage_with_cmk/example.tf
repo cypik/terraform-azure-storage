@@ -6,8 +6,9 @@ provider "azurerm" {
 ## Resource Group module call
 ##-----------------------------------------------------------------------------
 module "resource_group" {
-  source      = "git::https://github.com/cypik/terraform-azure-resource-group.git?ref=v1.0.0"
-  name        = "app"
+  source      = "cypik/resource-group/azure"
+  version     = "1.0.1"
+  name        = "app2"
   environment = "tested"
   location    = "North Europe"
 }
@@ -17,7 +18,8 @@ module "resource_group" {
 ## Virtual Network module call.
 ##-----------------------------------------------------------------------------
 module "vnet" {
-  source              = "git::https://github.com/cypik/terraform-azure-vnet.git?ref=v1.0.0"
+  source              = "cypik/vnet/azure"
+  version             = "1.0.1"
   name                = "app"
   environment         = "test"
   resource_group_name = module.resource_group.resource_group_name
@@ -29,8 +31,8 @@ module "vnet" {
 ## Subnet module call.
 ##-----------------------------------------------------------------------------
 module "subnet" {
-  source = "git::https://github.com/cypik/terraform-azure-subnet.git?ref=v1.0.0"
-
+  source               = "cypik/subnet/azure"
+  version              = "1.0.1"
   name                 = "app"
   environment          = "test"
   resource_group_name  = module.resource_group.resource_group_name
@@ -58,8 +60,9 @@ module "subnet" {
 ##-----------------------------------------------------------------------------
 module "vault" {
   depends_on                  = [module.vnet]
-  source                      = "git::https://github.com/cypik/terraform-azure-key-vault.git?ref=v1.0.0"
-  name                        = "app"
+  source                      = "cypik/key-vault/azure"
+  version                     = "1.0.1"
+  name                        = "ytjd457fdk"
   environment                 = "test"
   sku_name                    = "standard"
   resource_group_name         = module.resource_group.resource_group_name
@@ -68,8 +71,8 @@ module "vault" {
   enable_private_endpoint     = true
   enable_rbac_authorization   = true
   purge_protection_enabled    = true
-  enabled_for_disk_encryption = false
-  principal_id                = ["771xxxxxxxxxxxxxxxxxxxxxxxxxxx23"]
+  enabled_for_disk_encryption = true
+  principal_id                = ["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
   role_definition_name        = ["Key Vault Administrator"]
 
 }
@@ -82,11 +85,11 @@ module "storage-with-cmk" {
   label_order              = ["name", "environment", ]
   resource_group_name      = module.resource_group.resource_group_name
   location                 = module.resource_group.resource_group_location
-  storage_account_name     = "stogkqp0896"
+  storage_account_name     = "sg64refgs6"
   account_kind             = "BlockBlobStorage"
   account_tier             = "Premium"
   identity_type            = "UserAssigned"
-  object_id                = ["jhfxxxxxxxxxxxxxxxxxxxxxxxxxx93"]
+  object_id                = ["xxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
   account_replication_type = "ZRS"
 
   ###customer_managed_key can only be set when the account_kind is set to StorageV2 or account_tier set to Premium, and the identity type is UserAssigned.
