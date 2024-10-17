@@ -7,8 +7,8 @@ provider "azurerm" {
 ##-----------------------------------------------------------------------------
 module "resource_group" {
   source      = "cypik/resource-group/azure"
-  version     = "1.0.1"
-  name        = "app2"
+  version     = "1.0.2"
+  name        = "app-storage"
   environment = "tested"
   location    = "North Europe"
 }
@@ -19,7 +19,7 @@ module "resource_group" {
 ##-----------------------------------------------------------------------------
 module "vnet" {
   source              = "cypik/vnet/azure"
-  version             = "1.0.1"
+  version             = "1.0.2"
   name                = "app"
   environment         = "test"
   resource_group_name = module.resource_group.resource_group_name
@@ -32,7 +32,7 @@ module "vnet" {
 ##-----------------------------------------------------------------------------
 module "subnet" {
   source               = "cypik/subnet/azure"
-  version              = "1.0.1"
+  version              = "1.0.2"
   name                 = "app"
   environment          = "test"
   resource_group_name  = module.resource_group.resource_group_name
@@ -61,8 +61,8 @@ module "subnet" {
 module "vault" {
   depends_on                  = [module.vnet]
   source                      = "cypik/key-vault/azure"
-  version                     = "1.0.1"
-  name                        = "ytjd457fdk"
+  version                     = "1.0.2"
+  name                        = "ytjdgf7g65f7fdk"
   environment                 = "test"
   sku_name                    = "standard"
   resource_group_name         = module.resource_group.resource_group_name
@@ -72,7 +72,7 @@ module "vault" {
   enable_rbac_authorization   = true
   purge_protection_enabled    = true
   enabled_for_disk_encryption = true
-  principal_id                = ["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
+  principal_id                = ["xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
   role_definition_name        = ["Key Vault Administrator"]
 
 }
@@ -89,7 +89,7 @@ module "storage-with-cmk" {
   account_kind             = "BlockBlobStorage"
   account_tier             = "Premium"
   identity_type            = "UserAssigned"
-  object_id                = ["xxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
+  object_id                = ["xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"]
   account_replication_type = "ZRS"
 
   ###customer_managed_key can only be set when the account_kind is set to StorageV2 or account_tier set to Premium, and the identity type is UserAssigned.
@@ -102,5 +102,4 @@ module "storage-with-cmk" {
 
   virtual_network_id = module.vnet.id
   subnet_id          = module.subnet.default_subnet_id
-
 }
