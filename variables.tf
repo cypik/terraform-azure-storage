@@ -26,14 +26,14 @@ variable "label_order" {
 
 variable "managedby" {
   type        = string
-  default     = "Cypik"
-  description = "ManagedBy, eg 'cypik'."
+  default     = "info@cypik.com"
+  description = "ManagedBy, eg 'info@cypik.com'"
 }
 
 variable "enabled" {
   type        = bool
-  description = "Set to false to prevent the module from creating any resources."
   default     = true
+  description = "Set to false to prevent the module from creating any resources."
 }
 
 variable "resource_group_name" {
@@ -72,7 +72,7 @@ variable "account_replication_type" {
   description = "Defines the type of replication to use for this storage account. Valid options are LRS, GRS, RAGRS, ZRS, GZRS and RAGZRS. Changing this forces a new resource to be created when types LRS, GRS and RAGRS are changed to ZRS, GZRS or RAGZRS and vice versa."
 }
 
-variable "enable_https_traffic_only" {
+variable "https_traffic_only_enabled" {
   type        = bool
   default     = true
   description = " Boolean flag which forces HTTPS if enabled, see here for more information."
@@ -90,11 +90,6 @@ variable "min_tls_version" {
   description = "The minimum supported TLS version for the storage account"
 }
 
-variable "soft_delete_retention" {
-  type        = number
-  default     = 30
-  description = "Number of retention days for soft delete. If set to null it will disable soft delete all together."
-}
 
 variable "containers_list" {
   type        = list(object({ name = string, access_type = string }))
@@ -121,43 +116,42 @@ variable "network_rules" {
 #]
 
 variable "is_hns_enabled" {
-  description = "Is Hierarchical Namespace enabled? This can be used with Azure Data Lake Storage Gen 2. Changing this forces a new resource to be created."
   type        = bool
   default     = false
+  description = "Is Hierarchical Namespace enabled? This can be used with Azure Data Lake Storage Gen 2. Changing this forces a new resource to be created."
 }
 
 variable "sftp_enabled" {
-  description = "Boolean, enable SFTP for the storage account"
   type        = bool
   default     = false
+  description = "Boolean, enable SFTP for the storage account"
 }
 
 variable "enable_advanced_threat_protection" {
-  description = "Boolean flag which controls if advanced threat protection is enabled."
   default     = true
   type        = bool
+  description = "Boolean flag which controls if advanced threat protection is enabled."
 }
 
 variable "file_shares" {
-  description = "List of containers to create and their access levels."
   type        = list(object({ name = string, quota = number }))
   default     = []
+  description = "List of containers to create and their access levels."
 }
 
 variable "tables" {
-  description = "List of storage tables."
   type        = list(string)
   default     = []
+  description = "List of storage tables."
 }
 
 variable "queues" {
-  description = "List of storages queues"
   type        = list(string)
   default     = []
+  description = "List of storages queues"
 }
 
 variable "management_policy" {
-  description = "Configure Azure Storage firewalls and virtual networks"
   type = list(object({
     prefix_match               = set(string),
     tier_to_cool_after_days    = number,
@@ -172,13 +166,14 @@ variable "management_policy" {
     delete_after_days          = 100,
     snapshot_delete_after_days = 30
   }]
+  description = "Configure Azure Storage firewalls and virtual networks"
 }
 
 # Identity
 variable "identity_type" {
-  description = "Specifies the type of Managed Service Identity that should be configured on this Storage Account. Possible values are `SystemAssigned`, `UserAssigned`, `SystemAssigned, UserAssigned` (to enable both)."
   type        = string
   default     = "SystemAssigned"
+  description = "Specifies the type of Managed Service Identity that should be configured on this Storage Account. Possible values are `SystemAssigned`, `UserAssigned`, `SystemAssigned, UserAssigned` (to enable both)."
 }
 
 variable "key_vault_id" {
@@ -191,26 +186,31 @@ variable "shared_access_key_enabled" {
   default     = true
   description = " Indicates whether the storage account permits requests to be authorized with the account access key via Shared Key. If false, then all requests, including shared access signatures, must be authorized with Azure Active Directory (Azure AD). The default value is true."
 }
+
 variable "infrastructure_encryption_enabled" {
   type        = bool
   default     = true
   description = " Is infrastructure encryption enabled? Changing this forces a new resource to be created. Defaults to false."
 }
+
 variable "public_network_access_enabled" {
   type        = bool
   default     = true
   description = "Whether the public network access is enabled? Defaults to true."
 }
+
 variable "default_to_oauth_authentication" {
   type        = bool
   default     = false
   description = "Default to Azure Active Directory authorization in the Azure portal when accessing the Storage Account. The default value is false"
 }
+
 variable "cross_tenant_replication_enabled" {
   type        = bool
   default     = true
   description = "Should cross Tenant replication be enabled? Defaults to true."
 }
+
 variable "allow_nested_items_to_be_public" {
   type        = bool
   default     = true
@@ -273,17 +273,6 @@ variable "addon_virtual_network_id" {
   description = "The name of the addon vnet link vnet id"
 }
 
-variable "versioning_enabled" {
-  type        = bool
-  default     = true
-  description = "Is versioning enabled? Default to false."
-}
-
-variable "last_access_time_enabled" {
-  type        = bool
-  default     = false
-  description = "(Optional) Is the last access time based tracking enabled? Default to true."
-}
 
 # Diagnosis Settings Enable
 
@@ -312,4 +301,144 @@ variable "multi_sub_vnet_link" {
 variable "alias_sub" {
   type    = string
   default = null
+}
+
+variable "nfsv3_enabled" {
+  type        = bool
+  default     = false
+  description = "Is NFSv3 protocol enabled? Changing this forces a new resource to be created."
+}
+
+variable "custom_domain_name" {
+  type        = string
+  default     = null
+  description = "The Custom Domain Name to use for the Storage Account, which will be validated by Azure."
+}
+
+variable "use_subdomain" {
+  type        = bool
+  default     = false
+  description = "Should the Custom Domain Name be validated by using indirect CNAME validation?"
+}
+
+# Data protection
+variable "storage_blob_data_protection" {
+  description = "Storage account blob Data protection parameters."
+  type = object({
+    change_feed_enabled                       = optional(bool, false)
+    versioning_enabled                        = optional(bool, false)
+    last_access_time_enabled                  = optional(bool, false)
+    delete_retention_policy_in_days           = optional(number, 0)
+    container_delete_retention_policy_in_days = optional(number, 0)
+    container_point_in_time_restore           = optional(bool, false)
+  })
+  default = {
+    change_feed_enabled                       = false
+    last_access_time_enabled                  = false
+    versioning_enabled                        = false
+    delete_retention_policy_in_days           = 7
+    container_delete_retention_policy_in_days = 7
+  }
+}
+
+variable "storage_blob_cors_rule" {
+  description = "Storage Account blob CORS rule. Please refer to the [documentation](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account#cors_rule) for more information."
+  type = object({
+    allowed_headers    = list(string)
+    allowed_methods    = list(string)
+    allowed_origins    = list(string)
+    exposed_headers    = list(string)
+    max_age_in_seconds = number
+  })
+  default = null
+}
+
+variable "restore_policy" {
+  type        = bool
+  default     = false
+  description = "Wheteher or not create restore policy"
+}
+
+# SAS Policy
+variable "enable_sas_policy" {
+  type        = bool
+  default     = false
+  description = "Enable or disable the creation of the sas_policy block."
+}
+
+variable "sas_policy_settings" {
+  type = list(object({
+    expiration_period = string
+    expiration_action = string
+  }))
+  default = [
+    {
+      expiration_period = "7.00:00:00"
+      expiration_action = "Log"
+    }
+  ]
+}
+
+variable "static_website_config" {
+  type = object({
+    index_document     = optional(string)
+    error_404_document = optional(string)
+  })
+  default     = null
+  description = "Static website configuration. Can only be set when the `account_kind` is set to `StorageV2` or `BlockBlobStorage`."
+}
+
+# File Share Authentication
+variable "file_share_authentication" {
+  description = "Storage Account file shares authentication configuration."
+  type = object({
+    directory_type = string
+    active_directory = optional(object({
+      storage_sid         = string
+      domain_name         = string
+      domain_sid          = string
+      domain_guid         = string
+      forest_name         = string
+      netbios_domain_name = string
+    }))
+  })
+  default = null
+
+  validation {
+    condition = var.file_share_authentication == null || (
+      contains(["AADDS", "AD", ""], try(var.file_share_authentication.directory_type, ""))
+    )
+    error_message = "`file_share_authentication.directory_type` can only be `AADDS` or `AD`."
+  }
+  validation {
+    condition = var.file_share_authentication == null || (
+      try(var.file_share_authentication.directory_type, null) == "AADDS" || (
+        try(var.file_share_authentication.directory_type, null) == "AD" &&
+        try(var.file_share_authentication.active_directory, null) != null
+      )
+    )
+    error_message = "`file_share_authentication.active_directory` block is required when `file_share_authentication.directory_type` is set to `AD`."
+  }
+}
+
+# Routing
+variable "enable_routing" {
+  type        = bool
+  default     = false
+  description = "Enable or disable the creation of the routing block."
+}
+
+variable "routing" {
+  type = list(object({
+    publish_internet_endpoints  = bool
+    publish_microsoft_endpoints = bool
+    choice                      = string
+  }))
+  default = [
+    {
+      publish_internet_endpoints  = false
+      publish_microsoft_endpoints = false
+      choice                      = "MicrosoftRouting"
+    }
+  ]
 }

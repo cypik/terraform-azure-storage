@@ -5,7 +5,7 @@ data "azurerm_client_config" "current" {}
 ##-----------------------------------------------------------------------------
 module "labels" {
   source      = "cypik/labels/azure"
-  version     = "1.0.1"
+  version     = "1.0.2"
   name        = var.name
   environment = var.environment
   managedby   = var.managedby
@@ -21,9 +21,8 @@ resource "azurerm_storage_account" "cmk_storage" {
   location                          = var.location
   account_kind                      = var.account_kind
   account_tier                      = var.account_tier
-  access_tier                       = var.access_tier
   account_replication_type          = var.account_replication_type
-  enable_https_traffic_only         = var.enable_https_traffic_only
+  https_traffic_only_enabled        = var.https_traffic_only_enabled
   min_tls_version                   = var.min_tls_version
   is_hns_enabled                    = var.is_hns_enabled
   sftp_enabled                      = var.sftp_enabled
@@ -33,14 +32,92 @@ resource "azurerm_storage_account" "cmk_storage" {
   default_to_oauth_authentication   = var.default_to_oauth_authentication
   cross_tenant_replication_enabled  = var.cross_tenant_replication_enabled
   allow_nested_items_to_be_public   = var.allow_nested_items_to_be_public
+  access_tier                       = contains(["BlobStorage", "FileStorage", "StorageV2"], var.account_kind) ? var.access_tier : null
   tags                              = module.labels.tags
-  blob_properties {
-    delete_retention_policy {
-      days = var.soft_delete_retention
+  dynamic "blob_properties" {
+    for_each = (
+      var.account_kind != "FileStorage" && (var.storage_blob_data_protection != null || var.storage_blob_cors_rule != null) ? [1] : []
+    )
+    content {
+      change_feed_enabled      = var.nfsv3_enabled || var.sftp_enabled ? false : var.storage_blob_data_protection.change_feed_enabled
+      versioning_enabled       = var.nfsv3_enabled || var.sftp_enabled ? false : var.storage_blob_data_protection.versioning_enabled
+      last_access_time_enabled = var.nfsv3_enabled || var.sftp_enabled ? false : var.storage_blob_data_protection.last_access_time_enabled
+      dynamic "cors_rule" {
+        for_each = var.storage_blob_cors_rule != null ? [1] : []
+        content {
+          allowed_headers    = var.storage_blob_cors_rule.allowed_headers
+          allowed_methods    = var.storage_blob_cors_rule.allowed_methods
+          allowed_origins    = var.storage_blob_cors_rule.allowed_origins
+          exposed_headers    = var.storage_blob_cors_rule.exposed_headers
+          max_age_in_seconds = var.storage_blob_cors_rule.max_age_in_seconds
+        }
+      }
+      dynamic "delete_retention_policy" {
+        for_each = var.storage_blob_data_protection.delete_retention_policy_in_days > 0 ? [1] : []
+        content {
+          days = var.storage_blob_data_protection.delete_retention_policy_in_days
+        }
+      }
+      dynamic "container_delete_retention_policy" {
+        for_each = var.storage_blob_data_protection.container_delete_retention_policy_in_days > 0 ? [1] : []
+        content {
+          days = var.storage_blob_data_protection.container_delete_retention_policy_in_days
+        }
+      }
+      dynamic "restore_policy" {
+        for_each = var.restore_policy ? [1] : []
+        content {
+          days = var.storage_blob_data_protection.container_delete_retention_policy_in_days - 1
+        }
+      }
     }
-    versioning_enabled       = var.versioning_enabled
-    last_access_time_enabled = var.last_access_time_enabled
   }
+
+  dynamic "sas_policy" {
+    for_each = var.enable_sas_policy ? var.sas_policy_settings : []
+    content {
+      expiration_period = sas_policy.value.expiration_period
+      expiration_action = sas_policy.value.expiration_action
+    }
+  }
+
+  dynamic "static_website" {
+    for_each = var.static_website_config != null ? [1] : []
+    content {
+      index_document     = var.static_website_config.index_document
+      error_404_document = var.static_website_config.error_404_document
+    }
+  }
+
+  dynamic "azure_files_authentication" {
+    for_each = var.file_share_authentication != null ? [1] : []
+    content {
+      directory_type = var.file_share_authentication.directory_type
+      dynamic "active_directory" {
+        for_each = var.file_share_authentication.directory_type == "AD" ? [var.file_share_authentication.active_directory] : []
+        iterator = ad
+        content {
+          storage_sid         = ad.value.storage_sid
+          domain_name         = ad.value.domain_name
+          domain_sid          = ad.value.domain_sid
+          domain_guid         = ad.value.domain_guid
+          forest_name         = ad.value.forest_name
+          netbios_domain_name = ad.value.netbios_domain_name
+        }
+      }
+    }
+  }
+
+  dynamic "routing" {
+    for_each = var.enable_routing ? var.routing : []
+    content {
+      publish_internet_endpoints  = routing.value.publish_internet_endpoints
+      publish_microsoft_endpoints = routing.value.publish_microsoft_endpoints
+      choice                      = routing.value.choice
+    }
+  }
+
+
   dynamic "identity" {
     for_each = var.identity_type != null ? [1] : []
     content {
@@ -66,30 +143,118 @@ resource "azurerm_storage_account" "default_storage" {
   account_tier                      = var.account_tier
   access_tier                       = var.access_tier
   account_replication_type          = var.account_replication_type
-  enable_https_traffic_only         = var.enable_https_traffic_only
+  https_traffic_only_enabled        = var.https_traffic_only_enabled
   min_tls_version                   = var.min_tls_version
   is_hns_enabled                    = var.is_hns_enabled
   sftp_enabled                      = var.sftp_enabled
+  nfsv3_enabled                     = var.nfsv3_enabled
   infrastructure_encryption_enabled = var.infrastructure_encryption_enabled
   public_network_access_enabled     = var.public_network_access_enabled
   default_to_oauth_authentication   = var.default_to_oauth_authentication
   cross_tenant_replication_enabled  = var.cross_tenant_replication_enabled
   allow_nested_items_to_be_public   = var.allow_nested_items_to_be_public
   tags                              = module.labels.tags
-  blob_properties {
-    delete_retention_policy {
-      days = var.soft_delete_retention
+  dynamic "blob_properties" {
+    for_each = (
+      var.account_kind != "FileStorage" && (var.storage_blob_data_protection != null || var.storage_blob_cors_rule != null) ? [1] : []
+    )
+    content {
+      change_feed_enabled      = var.nfsv3_enabled || var.sftp_enabled ? false : var.storage_blob_data_protection.change_feed_enabled
+      versioning_enabled       = var.nfsv3_enabled || var.sftp_enabled ? false : var.storage_blob_data_protection.versioning_enabled
+      last_access_time_enabled = var.nfsv3_enabled || var.sftp_enabled ? false : var.storage_blob_data_protection.last_access_time_enabled
+      dynamic "cors_rule" {
+        for_each = var.storage_blob_cors_rule != null ? [1] : []
+        content {
+          allowed_headers    = var.storage_blob_cors_rule.allowed_headers
+          allowed_methods    = var.storage_blob_cors_rule.allowed_methods
+          allowed_origins    = var.storage_blob_cors_rule.allowed_origins
+          exposed_headers    = var.storage_blob_cors_rule.exposed_headers
+          max_age_in_seconds = var.storage_blob_cors_rule.max_age_in_seconds
+        }
+      }
+      dynamic "delete_retention_policy" {
+        for_each = var.storage_blob_data_protection.delete_retention_policy_in_days > 0 ? [1] : []
+        content {
+          days = var.storage_blob_data_protection.delete_retention_policy_in_days
+        }
+      }
+      dynamic "container_delete_retention_policy" {
+        for_each = var.storage_blob_data_protection.container_delete_retention_policy_in_days > 0 ? [1] : []
+        content {
+          days = var.storage_blob_data_protection.container_delete_retention_policy_in_days
+        }
+      }
+      dynamic "restore_policy" {
+        for_each = var.restore_policy ? [1] : []
+        content {
+          days = var.storage_blob_data_protection.container_delete_retention_policy_in_days - 1
+        }
+      }
     }
-    versioning_enabled       = var.versioning_enabled
-    last_access_time_enabled = var.last_access_time_enabled
   }
+
+  dynamic "sas_policy" {
+    for_each = var.enable_sas_policy ? var.sas_policy_settings : []
+    content {
+      expiration_period = sas_policy.value.expiration_period
+      expiration_action = sas_policy.value.expiration_action
+    }
+  }
+
+
+  dynamic "static_website" {
+    for_each = var.static_website_config != null ? [1] : []
+    content {
+      index_document     = var.static_website_config.index_document
+      error_404_document = var.static_website_config.error_404_document
+    }
+  }
+
+  dynamic "azure_files_authentication" {
+    for_each = var.file_share_authentication != null ? [1] : []
+    content {
+      directory_type = var.file_share_authentication.directory_type
+      dynamic "active_directory" {
+        for_each = var.file_share_authentication.directory_type == "AD" ? [var.file_share_authentication.active_directory] : []
+        iterator = ad
+        content {
+          storage_sid         = ad.value.storage_sid
+          domain_name         = ad.value.domain_name
+          domain_sid          = ad.value.domain_sid
+          domain_guid         = ad.value.domain_guid
+          forest_name         = ad.value.forest_name
+          netbios_domain_name = ad.value.netbios_domain_name
+        }
+      }
+    }
+  }
+
+  dynamic "routing" {
+    for_each = var.enable_routing ? var.routing : []
+    content {
+      publish_internet_endpoints  = routing.value.publish_internet_endpoints
+      publish_microsoft_endpoints = routing.value.publish_microsoft_endpoints
+      choice                      = routing.value.choice
+    }
+  }
+
+
   dynamic "identity" {
     for_each = var.identity_type != null ? [1] : []
     content {
       type = var.identity_type
     }
   }
+
+  dynamic "custom_domain" {
+    for_each = var.custom_domain_name != null ? [1] : []
+    content {
+      name          = var.custom_domain_name
+      use_subdomain = var.use_subdomain
+    }
+  }
 }
+
 resource "azurerm_user_assigned_identity" "identity" {
   count               = var.enabled && var.default_enabled == false ? 1 : 0
   location            = var.location
